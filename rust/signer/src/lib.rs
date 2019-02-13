@@ -14,17 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Parity.  If not, see <http://www.gnu.org/licenses/>.
 
-extern crate libc;
-extern crate rustc_serialize;
-extern crate tiny_keccak;
-extern crate parity_wordlist as wordlist;
-extern crate ethkey;
-extern crate ethstore;
-extern crate rlp;
-extern crate blockies;
-
 mod string;
 
+use parity_wordlist as wordlist;
 use rustc_serialize::hex::{ToHex, FromHex};
 use rustc_serialize::base64::{self, ToBase64};
 use tiny_keccak::Keccak;
