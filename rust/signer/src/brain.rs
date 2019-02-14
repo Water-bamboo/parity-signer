@@ -100,13 +100,25 @@ impl Keccak256<[u8; 32]> for [u8] {
 
 #[cfg(test)]
 mod tests {
-	use {Brain, Generator};
+	use super::Brain;
 
 	#[test]
 	fn test_brain() {
-		let words = "this is sparta!";
-		let first_keypair = Brain::new(words).keypair().unwrap();
-		let second_keypair = Brain::new(words).keypair().unwrap();
-		assert_eq!(first_keypair.public().address(), second_keypair.public().address());
+		let words = "this is sparta";
+		let expected_address = b"\x00\x6E\x27\xB6\xA7\x2E\x1f\x34\xC6\x26\x76\x2F\x3C\x47\x61\x54\x7A\xff\x14\x21";
+
+		let keypair = Brain::new(words).keypair().unwrap();
+
+		assert_eq!(keypair.public().address(), expected_address);
+
+	}
+
+	fn test_empty_phrase() {
+		let words = "";
+		let expected_address = b"\x00\xa3\x29\xc0\x64\x87\x69\xA7\x3a\xfA\xc7\xF9\x38\x1E\x08\xFB\x43\xdB\xEA\x72";
+
+		let keypair = Brain::new(words).keypair().unwrap();
+
+		assert_eq!(keypair.public().address(), expected_address);
 	}
 }
