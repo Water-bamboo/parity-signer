@@ -18,33 +18,10 @@
 //!
 //! **Parity Phrases are NOT BIP39.**
 
-use parity_wordlist as wordlist;
-use tiny_keccak::Keccak;
-use ethsign::{SecretKey, PublicKey};
+use crate::eth::KeyPair;
+use crate::util::Keccak256;
 
-pub struct KeyPair {
-	secret: SecretKey,
-	public: PublicKey,
-}
-
-impl KeyPair {
-	pub fn from_secret(secret: SecretKey) -> KeyPair {
-		let public = secret.public();
-
-		KeyPair {
-			secret,
-			public,
-		}
-	}
-
-	pub fn secret(&self) -> &SecretKey {
-		&self.secret
-	}
-
-	pub fn public(&self) -> &PublicKey {
-		&self.public
-	}
-}
+use ethsign::SecretKey;
 
 /// Simple brainwallet.
 pub struct Brain(String);
@@ -55,10 +32,6 @@ impl Brain {
 		S: Into<String>,
 	{
 		Brain(s.into())
-	}
-
-	pub fn validate_phrase(phrase: &str, expected_words: usize) -> Result<(), wordlist::Error> {
-		wordlist::validate_phrase(phrase, expected_words)
 	}
 
 	pub fn keypair(&mut self) -> Result<KeyPair, ()> {
@@ -84,20 +57,6 @@ impl Brain {
 	}
 }
 
-pub trait Keccak256<T> {
-	fn keccak256(&self) -> T where T: Sized;
-}
-
-impl Keccak256<[u8; 32]> for [u8] {
-	fn keccak256(&self) -> [u8; 32] {
-		let mut keccak = Keccak::new_keccak256();
-		let mut result = [0u8; 32];
-		keccak.update(self);
-		keccak.finalize(&mut result);
-		result
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::Brain;
@@ -109,16 +68,17 @@ mod tests {
 
 		let keypair = Brain::new(words).keypair().unwrap();
 
-		assert_eq!(keypair.public().address(), expected_address);
+		assert_eq!(keypair.address(), expected_address);
 
 	}
 
+	#[test]
 	fn test_empty_phrase() {
 		let words = "";
 		let expected_address = b"\x00\xa3\x29\xc0\x64\x87\x69\xA7\x3a\xfA\xc7\xF9\x38\x1E\x08\xFB\x43\xdB\xEA\x72";
 
 		let keypair = Brain::new(words).keypair().unwrap();
 
-		assert_eq!(keypair.public().address(), expected_address);
+		assert_eq!(keypair.address(), expected_address);
 	}
 }

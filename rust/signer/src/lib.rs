@@ -14,19 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Parity.  If not, see <http://www.gnu.org/licenses/>.
 
-mod string;
+mod eth;
 mod brain;
+mod util;
+
+use util::{Keccak256, StringPtr};
+use eth::KeyPair;
+use brain::Brain;
 
 use parity_wordlist as wordlist;
-use rustc_serialize::hex::{ToHex, FromHex};
-use rustc_serialize::base64::{self, ToBase64};
+use rustc_hex::{ToHex, FromHex};
 use tiny_keccak::Keccak;
-use ethkey::{KeyPair, Generator, Brain, Message, Password, sign};
+use ethkey::Password;
 use ethstore::Crypto;
 use rlp::decode_list;
 use blockies::{Blockies, create_icon, ethereum};
-
-use string::StringPtr;
 
 const CRYPTO_ROUNDS: ::std::num::NonZeroU32 = unsafe { ::std::num::NonZeroU32::new_unchecked(10240) }; 
 
@@ -42,12 +44,8 @@ fn blockies_icon_in_base64(seed: Vec<u8>) -> String {
   };
 
   create_icon(&mut result, Blockies::Ethereum(options)).unwrap();
-  result.to_base64(base64::Config {
-    char_set: base64::CharacterSet::Standard,
-    newline: base64::Newline::LF,
-    pad: true,
-    line_length: None,
-  })
+
+  base64::encode_config(&result, base64::URL_SAFE)
 }
 
 // string ffi
@@ -76,8 +74,8 @@ pub unsafe extern fn ethkey_keypair_destroy(keypair: *mut KeyPair) {
 
 #[no_mangle]
 pub unsafe extern fn ethkey_keypair_brainwallet(seed: *mut StringPtr) -> *mut KeyPair {
-  let mut generator = Brain::new((*seed).as_str().to_owned());
-  Box::into_raw(Box::new(generator.generate().unwrap()))
+  let mut generator = Brain::new((*seed).as_str());
+  Box::into_raw(Box::new(generator.keypair().unwrap()))
 }
 
 #[no_mangle]
@@ -94,14 +92,14 @@ pub unsafe extern fn ethkey_keypair_address(keypair: *mut KeyPair) -> *mut Strin
 
 #[no_mangle]
 pub unsafe extern fn ethkey_keypair_sign(keypair: *mut KeyPair, message: *mut StringPtr) -> *mut String {
-  let secret = (*keypair).secret();
-  let message: Message = (*message).as_str().parse().unwrap();
-  let signature = format!("{}", sign(secret, &message).unwrap());
+  let keypair = &*keypair;
+  let message: Vec<u8> = (*message).as_str().from_hex().unwrap();
+  let signature = keypair.sign(&message).unwrap().to_hex();
   Box::into_raw(Box::new(signature))
 }
 
 fn safe_rlp_item(rlp: &str, position: u32) -> Result<String, String> {
-  let hex = rlp.from_hex().map_err(| e | e.to_string())?;
+  let hex: Vec<u8> = rlp.from_hex().map_err(| e | e.to_string())?;
   let rlp = decode_list::<Vec<u8>>(&hex);
   let data = rlp.get(position as usize).ok_or_else(|| "Invalid RLP position".to_string())?;
   Ok(data.to_hex())
@@ -121,19 +119,15 @@ pub unsafe extern fn rlp_item(rlp: *mut StringPtr, position: u32, error: *mut u3
 
 #[no_mangle]
 pub unsafe extern fn keccak256(data: *mut StringPtr) -> *mut String {
-  let data = (*data).as_str();
-  let hex = data.from_hex().unwrap();
-  let mut res: [u8; 32] = [0; 32];
-  let mut keccak = Keccak::new_keccak256();
-  keccak.update(&hex);
-  keccak.finalize(&mut res);
+  let data: Vec<u8> = (*data).as_str().from_hex().unwrap();
+  let res = data.keccak256();
   Box::into_raw(Box::new(res.to_hex()))
 }
 
 #[no_mangle]
 pub unsafe extern fn eth_sign(data: *mut StringPtr) -> *mut String {
   let data = (*data).as_str();
-  let hex = data.from_hex().unwrap();
+  let hex: Vec<u8> = data.from_hex().unwrap();
   let message = format!("\x19Ethereum Signed Message:\n{}", hex.len()).into_bytes();
   let mut res: [u8; 32] = [0; 32];
   let mut keccak = Keccak::new_keccak256();
@@ -211,7 +205,7 @@ pub mod android {
   #[no_mangle]
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyBrainwalletAddress(env: JNIEnv, _: JClass, seed: JString) -> jstring {
     let seed: String = env.get_string(seed).expect("Invalid seed").into();
-    let keypair = Brain::new(seed).generate().unwrap();
+    let keypair = Brain::new(seed).keypair().unwrap();
     let java_address = env.new_string(format!("{:?}", keypair.address())).expect("Could not create java string");
     java_address.into_inner()
   }
@@ -219,7 +213,7 @@ pub mod android {
   #[no_mangle]
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyBrainwalletSecret(env: JNIEnv, _: JClass, seed: JString) -> jstring {
     let seed: String = env.get_string(seed).expect("Invalid seed").into();
-    let keypair = Brain::new(seed).generate().unwrap();
+    let keypair = Brain::new(seed).keypair().unwrap();
     let java_secret = env.new_string(format!("{:?}", keypair.secret())).expect("Could not create java string");
     java_secret.into_inner()
   }
@@ -228,10 +222,10 @@ pub mod android {
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyBrainwalletSign(env: JNIEnv, _: JClass, seed: JString, message: JString) -> jstring {
     let seed: String = env.get_string(seed).expect("Invalid seed").into();
     let message: String = env.get_string(message).expect("Invalid message").into();
-    let keypair = Brain::new(seed).generate().unwrap();
-    let message: Message = message.parse().unwrap();
-    let signature = sign(keypair.secret(), &message).unwrap();
-    let java_signature = env.new_string(format!("{}", signature)).expect("Could not create java string");
+    let keypair = Brain::new(seed).keypair().unwrap();
+    let message: Vec<u8> = message.from_hex().unwrap();
+    let signature = keypair.sign(&message).unwrap();
+    let java_signature = env.new_string(signature.to_hex::<String>()).expect("Could not create java string");
     java_signature.into_inner()
   }
 
@@ -251,25 +245,22 @@ pub mod android {
   #[no_mangle]
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyKeccak(env: JNIEnv, _: JClass, data: JString) -> jstring {
     let data: String = env.get_string(data).expect("Invalid seed").into();
-    let hex = data.from_hex().unwrap();
-    let mut res: [u8; 32] = [0; 32];
-    let mut keccak = Keccak::new_keccak256();
-    keccak.update(&hex);
-    keccak.finalize(&mut res);
-    env.new_string(res.to_hex()).expect("Could not create java string").into_inner()
+    let data: Vec<u8> = data.from_hex().unwrap();
+    let res = data.keccak256();
+    env.new_string(res.to_hex::<String>()).expect("Could not create java string").into_inner()
   }
 
   #[no_mangle]
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyEthSign(env: JNIEnv, _: JClass, data: JString) -> jstring {
     let data: String = env.get_string(data).expect("Invalid seed").into();
-    let hex = data.from_hex().unwrap();
+    let hex: Vec<u8> = data.from_hex().unwrap();
     let message = format!("\x19Ethereum Signed Message:\n{}", hex.len()).into_bytes();
     let mut res: [u8; 32] = [0; 32];
     let mut keccak = Keccak::new_keccak256();
     keccak.update(&message);
     keccak.update(&hex);
     keccak.finalize(&mut res);
-    env.new_string(res.to_hex()).expect("Could not create java string").into_inner()
+    env.new_string(res.to_hex::<String>()).expect("Could not create java string").into_inner()
   }
 
   #[no_mangle]
