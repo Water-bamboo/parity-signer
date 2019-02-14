@@ -45,7 +45,7 @@ fn blockies_icon_in_base64(seed: Vec<u8>) -> String {
 
   create_icon(&mut result, Blockies::Ethereum(options)).unwrap();
 
-  base64::encode_config(&result, base64::URL_SAFE)
+  base64::encode(&result)
 }
 
 // string ffi
