@@ -25,12 +25,13 @@ use brain::Brain;
 use parity_wordlist as wordlist;
 use rustc_hex::{ToHex, FromHex};
 use tiny_keccak::Keccak;
-use ethkey::Password;
-use ethstore::Crypto;
+use ethsign::{Protected, keyfile::Crypto};
 use rlp::decode_list;
 use blockies::{Blockies, create_icon, ethereum};
+use std::num::NonZeroU32;
 
-const CRYPTO_ROUNDS: ::std::num::NonZeroU32 = unsafe { ::std::num::NonZeroU32::new_unchecked(10240) }; 
+// 10240 is always non-zero, ergo this is safe
+const CRYPTO_ITERATIONS: NonZeroU32 = unsafe { NonZeroU32::new_unchecked(10240) }; 
 
 fn blockies_icon_in_base64(seed: Vec<u8>) -> String {
   let mut result = Vec::new();
@@ -74,19 +75,19 @@ pub unsafe extern fn ethkey_keypair_destroy(keypair: *mut KeyPair) {
 
 #[no_mangle]
 pub unsafe extern fn ethkey_keypair_brainwallet(seed: *mut StringPtr) -> *mut KeyPair {
-  let mut generator = Brain::new((*seed).as_str());
-  Box::into_raw(Box::new(generator.keypair().unwrap()))
+  let keypair = Brain::new(&**seed).keypair().unwrap();
+  Box::into_raw(Box::new(keypair))
 }
 
 #[no_mangle]
 pub unsafe extern fn ethkey_keypair_secret(keypair: *mut KeyPair) -> *mut String {
-  let secret = format!("{:?}", (*keypair).secret());
+  let secret: String = (*keypair).secret().as_bytes().to_hex();
   Box::into_raw(Box::new(secret))
 }
 
 #[no_mangle]
 pub unsafe extern fn ethkey_keypair_address(keypair: *mut KeyPair) -> *mut String {
-  let address = format!("{:?}", (*keypair).address());
+  let address: String = (*keypair).address().to_hex();
   Box::into_raw(Box::new(address))
 }
 
@@ -158,22 +159,24 @@ pub unsafe extern fn random_phrase(words: u32) -> *mut String {
 #[no_mangle]
 pub unsafe extern fn encrypt_data(data: *mut StringPtr, password: *mut StringPtr) -> *mut String {
   let data = (*data).as_str();
-  let password = Password::from((*password).as_str());
-  let crypto = Crypto::with_plain(data.as_bytes(), &password, CRYPTO_ROUNDS).unwrap();
-  Box::into_raw(Box::new(crypto.into()))
+  let password = Protected((*password).as_str().as_bytes().to_vec());
+  let crypto = Crypto::encrypt(data.as_bytes(), &password, CRYPTO_ITERATIONS).unwrap();
+  Box::into_raw(Box::new(serde_json::to_string(&crypto).unwrap()))
 }
 
 #[no_mangle]
 pub unsafe extern fn decrypt_data(encrypted_data: *mut StringPtr, password: *mut StringPtr, error: *mut u32) -> *mut String {
   let data = (*encrypted_data).as_str();
-  let password = Password::from((*password).as_str());
-  let crypto: Crypto = match data.parse() {
+  let password = Protected((*password).as_str().as_bytes().to_vec());
+
+  let crypto: Crypto = match serde_json::from_str(&data) {
     Ok(crypto) => crypto,
     Err(_) => {
       *error = 1;
       return Box::into_raw(Box::new(String::new()))
-    }
+    },
   };
+
   match crypto.decrypt(&password) {
     Ok(decrypted) => {
       Box::into_raw(Box::new(String::from_utf8_unchecked(decrypted)))
@@ -206,7 +209,7 @@ pub mod android {
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyBrainwalletAddress(env: JNIEnv, _: JClass, seed: JString) -> jstring {
     let seed: String = env.get_string(seed).expect("Invalid seed").into();
     let keypair = Brain::new(seed).keypair().unwrap();
-    let java_address = env.new_string(format!("{:?}", keypair.address())).expect("Could not create java string");
+    let java_address = env.new_string(keypair.address().to_hex::<String>()).expect("Could not create java string");
     java_address.into_inner()
   }
 
@@ -214,7 +217,7 @@ pub mod android {
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyBrainwalletSecret(env: JNIEnv, _: JClass, seed: JString) -> jstring {
     let seed: String = env.get_string(seed).expect("Invalid seed").into();
     let keypair = Brain::new(seed).keypair().unwrap();
-    let java_secret = env.new_string(format!("{:?}", keypair.secret())).expect("Could not create java string");
+    let java_secret = env.new_string(keypair.secret().as_bytes().to_hex::<String>()).expect("Could not create java string");
     java_secret.into_inner()
   }
 
@@ -280,20 +283,21 @@ pub mod android {
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyEncryptData(env: JNIEnv, _: JClass, data: JString, password: JString) -> jstring {
     let data: String = env.get_string(data).expect("Invalid data").into();
     let password: String = env.get_string(password).expect("Invalid password").into();
-    let password = Password::from(password);
-    let crypto = Crypto::with_plain(data.as_bytes(), &password, CRYPTO_ROUNDS).unwrap();
-    env.new_string(String::from(crypto)).expect("Could not create java string").into_inner()
+    let password = Protected(password.into_bytes());
+    let crypto = Crypto::encrypt(data.as_bytes(), &password, CRYPTO_ITERATIONS).unwrap();
+    env.new_string(serde_json::to_string(&crypto).unwrap()).expect("Could not create java string").into_inner()
   }
 
   #[no_mangle]
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyDecryptData(env: JNIEnv, _: JClass, data: JString, password: JString) -> jstring {
     let data: String = env.get_string(data).expect("Invalid data").into();
     let password: String = env.get_string(password).expect("Invalid password").into();
-    let password = Password::from(password);
-    let crypto: Crypto = match data.parse() {
+    let password = Protected(password.into_bytes());
+
+    let crypto: Crypto = match serde_json::from_str(&data) {
       Ok(crypto) => crypto,
       Err(_) => {
-        let result = env.new_string("").expect("first result to be created").into_inner();
+        let result = env.new_string("").expect("Could not create java string").into_inner();
         env.throw(new_exception(&env)).expect("first throw failed");
         return result
       },
@@ -304,8 +308,8 @@ pub mod android {
         env.new_string(String::from_utf8_unchecked(decrypted)).expect("Could not create java string").into_inner()
       },
       Err(_) => {
-        let result = env.new_string("").expect("second result to be created").into_inner();
-        env.throw(new_exception(&env)).expect("second throw failed");
+        let result = env.new_string("").expect("Could not create java string").into_inner();
+        env.throw(new_exception(&env)).expect("second trhow failed");
         result
       },
     }
@@ -387,7 +391,7 @@ pub mod android {
 
 //         let data = b"test_data";
 //         let password = Password::from("password");
-//         let crypto = Crypto::with_plain(data, &password, CRYPTO_ROUNDS).unwrap();
+//         let crypto = Crypto::with_plain(data, &password, CRYPTO_ITERATIONS).unwrap();
 //         let crypto_string: String = crypto.into();
 //         let env = jvm.env();
 //         let jni_crypto_str = env.new_string(crypto_string).unwrap();
