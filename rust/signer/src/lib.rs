@@ -80,12 +80,6 @@ pub unsafe extern fn ethkey_keypair_brainwallet(seed: *mut StringPtr) -> *mut Ke
 }
 
 #[no_mangle]
-pub unsafe extern fn ethkey_keypair_secret(keypair: *mut KeyPair) -> *mut String {
-  let secret: String = (*keypair).secret().as_bytes().to_hex();
-  Box::into_raw(Box::new(secret))
-}
-
-#[no_mangle]
 pub unsafe extern fn ethkey_keypair_address(keypair: *mut KeyPair) -> *mut String {
   let address: String = (*keypair).address().to_hex();
   Box::into_raw(Box::new(address))
@@ -211,14 +205,6 @@ pub mod android {
     let keypair = Brain::new(seed).keypair().unwrap();
     let java_address = env.new_string(keypair.address().to_hex::<String>()).expect("Could not create java string");
     java_address.into_inner()
-  }
-
-  #[no_mangle]
-  pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyBrainwalletSecret(env: JNIEnv, _: JClass, seed: JString) -> jstring {
-    let seed: String = env.get_string(seed).expect("Invalid seed").into();
-    let keypair = Brain::new(seed).keypair().unwrap();
-    let java_secret = env.new_string(keypair.secret().as_bytes().to_hex::<String>()).expect("Could not create java string");
-    java_secret.into_inner()
   }
 
   #[no_mangle]

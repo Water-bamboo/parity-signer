@@ -27,18 +27,6 @@ class EthkeyBridge: NSObject {
     resolve(address)
   }
   
-  @objc func brainWalletSecret(_ seed: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) -> Void {
-    var seed_ptr = seed.asPtr()
-    let keypair_ptr = ethkey_keypair_brainwallet(&seed_ptr)
-    let secret_rust_str = ethkey_keypair_secret(keypair_ptr)
-    let secret_rust_str_ptr = rust_string_ptr(secret_rust_str)
-    let secret = String.fromStringPtr(ptr: secret_rust_str_ptr!.pointee)
-    rust_string_ptr_destroy(secret_rust_str_ptr)
-    rust_string_destroy(secret_rust_str)
-    ethkey_keypair_destroy(keypair_ptr)
-    resolve(secret)
-  }
-  
   @objc func brainWalletSign(_ seed: String, message: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) -> Void {
     print(seed, " + ", message)
     var seed_ptr = seed.asPtr()

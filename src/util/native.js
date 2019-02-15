@@ -31,7 +31,6 @@ export const brainWalletAddress = seed =>
       checksummedAddress(address, hash)
     );
   });
-export const brainWalletSecret = seed => EthkeyBridge.brainWalletSecret(seed);
 export const brainWalletSign = (seed, message) =>
   EthkeyBridge.brainWalletSign(seed, message);
 export const rlpItem = (rlp, position) => EthkeyBridge.rlpItem(rlp, position);
