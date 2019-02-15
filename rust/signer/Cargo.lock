@@ -335,8 +335,8 @@ dependencies = [
 
 [[package]]
 name = "ethsign"
-version = "0.1.3"
-source = "git+https://github.com/maciejhirsz/ethsign?branch=mh-libsecp256k1#d946b45ca04f0a5687febd82a736a8a16ab3e57c"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libsecp256k1 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-crypto 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1104,7 +1104,7 @@ dependencies = [
  "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bip39 0.6.0-beta.1 (git+https://github.com/maciejhirsz/bip39-rs)",
  "blockies 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ethsign 0.1.3 (git+https://github.com/maciejhirsz/ethsign?branch=mh-libsecp256k1)",
+ "ethsign 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jni 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-wordlist 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1302,7 +1302,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum ethbloom 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1a93a43ce2e9f09071449da36bfa7a1b20b950ee344b6904ff23de493b03b386"
 "checksum ethereum-types 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "35b3c5a18bc5e73a32a110ac743ec04b02bbbcd3b71d3118d40a6113d509378a"
 "checksum ethereum-types-serialize 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4ac59a21a9ce98e188f3dace9eb67a6c4a3c67ec7fbc7218cb827852679dc002"
-"checksum ethsign 0.1.3 (git+https://github.com/maciejhirsz/ethsign?branch=mh-libsecp256k1)" = "<none>"
+"checksum ethsign 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "84a60878a66437471aab7bad1e9da30a7ce86e390b5afff261459cbf24a3978d"
 "checksum failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "795bd83d3abeb9220f257e597aa0080a508b27533824adf336529648f6abf7e2"
 "checksum failure_derive 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "ea1063915fd7ef4309e222a5a07cf9c319fb9c7836b1f89b85458672dbb127e1"
 "checksum fake-simd 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"

@@ -9,7 +9,7 @@ edition = "2018"
 libc = "0.2"
 base64 = "0.10.1"
 rustc-hex = "2.0.1"
-ethsign = { git = "https://github.com/maciejhirsz/ethsign", branch = "mh-libsecp256k1", default-features = false, features = ["secp256k1-rs"] }
+ethsign = { version = "0.2", default-features = false, features = ["secp256k1-rs"] }
 rlp = { version = "0.3.0", features = ["ethereum"] }
 tiny-keccak = "1.4"
 blockies = "0.2"
