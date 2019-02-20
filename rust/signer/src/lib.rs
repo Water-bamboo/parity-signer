@@ -15,23 +15,22 @@
 // along with Parity.  If not, see <http://www.gnu.org/licenses/>.
 
 mod eth;
-mod brain;
 mod util;
 
 use util::{Keccak256, StringPtr};
 use eth::KeyPair;
-use brain::Brain;
 
+use blockies::{Blockies, create_icon, ethereum};
+use ethsign::{Protected, keyfile::Crypto};
 use parity_wordlist as wordlist;
+use rlp::decode_list;
 use rustc_hex::{ToHex, FromHex};
 use tiny_keccak::Keccak;
-use ethsign::{Protected, keyfile::Crypto};
-use rlp::decode_list;
-use blockies::{Blockies, create_icon, ethereum};
+
 use std::num::NonZeroU32;
 
 // 10240 is always non-zero, ergo this is safe
-const CRYPTO_ITERATIONS: NonZeroU32 = unsafe { NonZeroU32::new_unchecked(10240) }; 
+const CRYPTO_ITERATIONS: NonZeroU32 = unsafe { NonZeroU32::new_unchecked(10240) };
 
 fn blockies_icon_in_base64(seed: Vec<u8>) -> String {
   let mut result = Vec::new();
@@ -75,7 +74,7 @@ pub unsafe extern fn ethkey_keypair_destroy(keypair: *mut KeyPair) {
 
 #[no_mangle]
 pub unsafe extern fn ethkey_keypair_brainwallet(seed: *mut StringPtr) -> *mut KeyPair {
-  let keypair = Brain::new(&**seed).keypair().unwrap();
+  let keypair = KeyPair::from_parity_phrase(&**seed);
   Box::into_raw(Box::new(keypair))
 }
 
@@ -185,13 +184,13 @@ pub unsafe extern fn decrypt_data(encrypted_data: *mut StringPtr, password: *mut
 #[cfg(feature = "jni")]
 #[allow(non_snake_case)]
 pub mod android {
-  extern crate jni;
+  // extern crate jni;
 
   use wordlist;
   use super::*;
-  use self::jni::JNIEnv;
-  use self::jni::objects::{JClass, JString, JThrowable};
-  use self::jni::sys::{jint, jstring};
+  use jni::JNIEnv;
+  use jni::objects::{JClass, JString, JThrowable};
+  use jni::sys::{jint, jstring};
 
   fn new_exception<'a>(env: &'a JNIEnv<'a>) -> JThrowable<'a> {
     let exception = env.find_class("java/lang/Exception").unwrap();
@@ -202,7 +201,7 @@ pub mod android {
   #[no_mangle]
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyBrainwalletAddress(env: JNIEnv, _: JClass, seed: JString) -> jstring {
     let seed: String = env.get_string(seed).expect("Invalid seed").into();
-    let keypair = Brain::new(seed).keypair().unwrap();
+    let keypair = KeyPair::from_parity_phrase(&seed);
     let java_address = env.new_string(keypair.address().to_hex::<String>()).expect("Could not create java string");
     java_address.into_inner()
   }
@@ -211,7 +210,7 @@ pub mod android {
   pub unsafe extern fn Java_io_parity_signer_EthkeyBridge_ethkeyBrainwalletSign(env: JNIEnv, _: JClass, seed: JString, message: JString) -> jstring {
     let seed: String = env.get_string(seed).expect("Invalid seed").into();
     let message: String = env.get_string(message).expect("Invalid message").into();
-    let keypair = Brain::new(seed).keypair().unwrap();
+    let keypair = KeyPair::from_parity_phrase(&seed);
     let message: Vec<u8> = message.from_hex().unwrap();
     let signature = keypair.sign(&message).unwrap();
     let java_signature = env.new_string(signature.to_hex::<String>()).expect("Could not create java string");

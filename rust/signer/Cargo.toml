@@ -6,19 +6,20 @@ build = "build.rs"
 edition = "2018"
 
 [dependencies]
-libc = "0.2"
 base64 = "0.10.1"
-rustc-hex = "2.0.1"
-ethsign = { version = "0.2", default-features = false, features = ["secp256k1-rs"] }
-rlp = { version = "0.3.0", features = ["ethereum"] }
-tiny-keccak = "1.4"
 blockies = "0.2"
-parity-wordlist = "1.2.1"
+ethsign = { version = "0.2", default-features = false, features = ["secp256k1-rs"] }
 jni = { version = "0.10.2", default-features = false, optional = true }
-bip39 = { git = "https://github.com/maciejhirsz/bip39-rs", default-features = false } # This will land in offical 0.6, sometime...
+libc = "0.2"
+parity-wordlist = "1.2.1"
+rlp = { version = "0.3.0", features = ["ethereum"] }
+rustc-hex = "2.0.1"
 schnorrkel = "0.0.0"
 serde = "1.0"
 serde_json = "1.0"
+tiny-bip39 = { version = "0.6", default-features = false }
+tiny-hderive = "0.1"
+tiny-keccak = "1.4"
 
 [lib]
 name = "signer"
