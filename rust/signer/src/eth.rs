@@ -16,8 +16,11 @@
 
 //! Ethereum key utils
 
-use ethsign::{SecretKey, PublicKey, Error};
 use crate::util::Keccak256;
+
+use bip39::{Mnemonic, Seed, Language};
+use ethsign::{SecretKey, PublicKey, Error};
+use tiny_hderive::bip32::ExtendedPrivKey;
 
 pub struct KeyPair {
 	secret: SecretKey,
@@ -54,6 +57,19 @@ impl KeyPair {
 		}
 	}
 
+	pub fn from_bip39_phrase(phrase: &str) -> Option<KeyPair> {
+		let mnemonic = Mnemonic::from_phrase(phrase, Language::English).ok()?;
+		let seed = Seed::new(&mnemonic, "");
+		let epriv = ExtendedPrivKey::derive(seed.as_bytes(), "m/44'/60'/0'/0/0").ok()?;
+
+		SecretKey::from_raw(&epriv.secret()).map(KeyPair::from_secret).ok()
+	}
+
+	pub fn from_auto_phrase(phrase: &str) -> KeyPair {
+		Self::from_bip39_phrase(phrase)
+			.unwrap_or_else(|| Self::from_parity_phrase(phrase))
+	}
+
 	pub fn secret(&self) -> &SecretKey {
 		&self.secret
 	}
@@ -84,11 +100,21 @@ mod tests {
 	use super::*;
 
 	#[test]
+	fn test_bip39_phrase() {
+        let phrase = "panda eyebrow bullet gorilla call smoke muffin taste mesh discover soft ostrich alcohol speed nation flash devote level hobby quick inner drive ghost inside";
+        let expected_address = b"\x63\xF9\xA9\x2D\x8D\x61\xb4\x8a\x9f\xFF\x8d\x58\x08\x04\x25\xA3\x01\x2d\x05\xC8";
+
+        let keypair = KeyPair::from_bip39_phrase(phrase).unwrap();
+
+        assert_eq!(keypair.address(), expected_address);
+	}
+
+	#[test]
 	fn test_parity_phrase() {
-		let words = "this is sparta";
+		let phrase = "this is sparta";
 		let expected_address = b"\x00\x6E\x27\xB6\xA7\x2E\x1f\x34\xC6\x26\x76\x2F\x3C\x47\x61\x54\x7A\xff\x14\x21";
 
-		let keypair = KeyPair::from_parity_phrase(words);
+		let keypair = KeyPair::from_parity_phrase(phrase);
 
 		assert_eq!(keypair.address(), expected_address);
 
@@ -96,11 +122,33 @@ mod tests {
 
 	#[test]
 	fn test_parity_empty_phrase() {
-		let words = "";
+		let phrase = "";
 		let expected_address = b"\x00\xa3\x29\xc0\x64\x87\x69\xA7\x3a\xfA\xc7\xF9\x38\x1E\x08\xFB\x43\xdB\xEA\x72";
 
-		let keypair = KeyPair::from_parity_phrase(words);
+		let keypair = KeyPair::from_parity_phrase(phrase);
 
 		assert_eq!(keypair.address(), expected_address);
+	}
+
+
+	#[test]
+	fn test_auto_bip39_phrase() {
+        let phrase = "panda eyebrow bullet gorilla call smoke muffin taste mesh discover soft ostrich alcohol speed nation flash devote level hobby quick inner drive ghost inside";
+        let expected_address = b"\x63\xF9\xA9\x2D\x8D\x61\xb4\x8a\x9f\xFF\x8d\x58\x08\x04\x25\xA3\x01\x2d\x05\xC8";
+
+        let keypair = KeyPair::from_auto_phrase(phrase);
+
+        assert_eq!(keypair.address(), expected_address);
+	}
+
+	#[test]
+	fn test_auto_parity_phrase() {
+		let phrase = "this is sparta";
+		let expected_address = b"\x00\x6E\x27\xB6\xA7\x2E\x1f\x34\xC6\x26\x76\x2F\x3C\x47\x61\x54\x7A\xff\x14\x21";
+
+		let keypair = KeyPair::from_auto_phrase(phrase);
+
+		assert_eq!(keypair.address(), expected_address);
+
 	}
 }

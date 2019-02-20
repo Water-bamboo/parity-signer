@@ -11,7 +11,6 @@ blockies = "0.2"
 ethsign = { version = "0.2", default-features = false, features = ["secp256k1-rs"] }
 jni = { version = "0.10.2", default-features = false, optional = true }
 libc = "0.2"
-parity-wordlist = "1.2.1"
 rlp = { version = "0.3.0", features = ["ethereum"] }
 rustc-hex = "2.0.1"
 schnorrkel = "0.0.0"

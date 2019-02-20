@@ -40,7 +40,7 @@ export const blockiesIcon = seed =>
   EthkeyBridge.blockiesIcon(seed.toLowerCase()).then(
     icon => 'data:image/png;base64,' + icon
   );
-export const words = () => EthkeyBridge.randomPhrase(11);
+export const words = () => EthkeyBridge.randomPhrase();
 export const encryptData = (data, password) =>
   EthkeyBridge.encryptData(data, password);
 export const decryptData = (data, password) =>

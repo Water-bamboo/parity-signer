@@ -75,8 +75,8 @@ public class EthkeyBridge extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void randomPhrase(int words, Promise promise) {
-        promise.resolve(ethkeyRandomPhrase(words));
+    public void randomPhrase(Promise promise) {
+        promise.resolve(ethkeyRandomPhrase());
     }
 
     @ReactMethod
@@ -99,7 +99,7 @@ public class EthkeyBridge extends ReactContextBaseJavaModule {
     private static native String ethkeyKeccak(String data);
     private static native String ethkeyEthSign(String data);
     private static native String ethkeyBlockiesIcon(String seed);
-    private static native String ethkeyRandomPhrase(int words);
+    private static native String ethkeyRandomPhrase();
     private static native String ethkeyEncryptData(String data, String password);
     private static native String ethkeyDecryptData(String data, String password);
 }
