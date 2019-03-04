@@ -8,7 +8,7 @@ export const NETWORK_IDS = {
   '2': 'expanse',
   '3': 'ropsten',
   '4': 'rinkeby',
-  '5': 'gorli',
+  '5': 'goerli',
   '8': 'ubiq',
   '42': 'kovan',
   '61': 'classic',
@@ -29,7 +29,7 @@ export const NETWORK_TITLES = {
   [NETWORK_ID.classic]: 'Ethereum Classic',
   [NETWORK_ID.ropsten]: 'Ropsten Testnet',
   [NETWORK_ID.kovan]: 'Kovan Testnet',
-  [NETWORK_ID.gorli]: 'Görli Testnet'
+  [NETWORK_ID.goerli]: 'Görli Testnet'
 };
 
 export const NETWORK_COLOR = {
