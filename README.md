@@ -121,3 +121,7 @@ adb shell input keyevent 82
 (You can find `adb` binary in your local Android SDK folder under `platform-tools`, eg. `/home/your_username/Android/Sdk/platform-tools`)
 
 This should open a menu on the device. In that menu go to `Dev Settings` > `Debug server host & port for device`, and enter your local IP address with port 8081 (eg. `192.168.1.42:8081`). Restart the app, the error should disappear.
+
+----
+Becareful the NDK version.
+Do cargo clean.
